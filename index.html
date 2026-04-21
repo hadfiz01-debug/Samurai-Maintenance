@@ -275,6 +275,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   .stats-row{grid-template-columns:repeat(2,1fr);gap:8px;}
   .stat-card{padding:14px 16px;}
   .stat-val{font-size:26px;}
+  .stat-card:last-child{grid-column:1/-1;}
 
   /* ADMIN TABLE — hide, show mobile cards instead */
   .tbl-wrap{display:none;}
@@ -506,6 +507,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       </div>
       <div class="tbl-body"><div class="tbl-inner" id="tbl-body"></div></div>
     </div>
+    <div class="mobile-ticket-list" id="mobile-ticket-list"></div>
   </div>
 </div>
 
