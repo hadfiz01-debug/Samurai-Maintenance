@@ -446,7 +446,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx3ooLFo7AOGe5-ZRzTuGmKfJ4Gb9rme7DGGheeYptGWXvME3uKfDrguDxA3HcZtnbbIw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzolgdbdtjBMp_PYTR59M1Ta0mRhQfrCUAgk4tF_iZUQYyxZ_sHglVbbQ3QFs43ZMI0xg/exec';
 const ADMIN_PASS = '8888';
 const REFRESH_MS = 30000;
 const BRANCHES = [
@@ -748,7 +748,7 @@ async function submitForm(){
   const failEl=document.getElementById('submit-fail');
   btn.disabled=true; btn.textContent='Submitting…'; failEl.classList.remove('show');
   try{
-    const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({branch,equipment,issue,name,contact})});
+    const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'submit',branch,equipment,issue,name,contact})});
     const json=await res.json();
     if(json.status==='ok'){
       selectedPhotos=[]; renderPhotoPreview();
@@ -892,18 +892,42 @@ function openMod(id){
         <textarea class="m-txt" id="mod-notes" placeholder="Vendor, cost, action, ETA…">${t.notes||''}</textarea>
       </div>
     </div>
-    <div class="session-note">ℹ︎ Changes are session-only. Update the Google Sheet to make them permanent.</div>`;
+    <div class="session-note">ℹ︎ Changes save directly to the Google Sheet and will appear on staff portal within 30 seconds.</div>`;
   document.getElementById('modal-ov').classList.add('open');
 }
-function saveMod(){
+async function saveMod(){
   const t=TICKETS.find(x=>x.id===editingId);if(!t)return;
   const urgency=document.getElementById('mod-urg').value;
   const status=document.getElementById('mod-sta').value;
   const assigned=document.getElementById('mod-asgn').value;
   const notes=document.getElementById('mod-notes').value;
-  LOCAL_OVERRIDES[editingId]={urgency,status,assigned,notes};
-  Object.assign(t,{urgency,status,assigned,notes});
-  closeModDirect();render();
+
+  // Extract row number from ticket id (T-001 = row 2, T-002 = row 3, etc)
+  const rowIndex = parseInt(t.id.replace('T-','')) + 1;
+
+  const saveBtn = document.querySelector('#modal-ov .btn-primary');
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving…'; }
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify({action:'update', rowIndex, urgency, status, assigned, notes})
+    });
+    const json = await res.json();
+    if(json.status==='ok'){
+      // Update local state
+      LOCAL_OVERRIDES[editingId]={urgency,status,assigned,notes};
+      Object.assign(t,{urgency,status,assigned,notes});
+      closeModDirect();
+      render();
+      // Refresh data after short delay so staff portal also updates
+      setTimeout(()=>fetchAdmin(),1500);
+    } else { throw new Error('Save failed'); }
+  } catch(e) {
+    alert('Could not save changes. Please try again.');
+  } finally {
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='Save Changes'; }
+  }
 }
 function closeMod(e){if(e.target===document.getElementById('modal-ov'))closeModDirect();}
 function closeModDirect(){document.getElementById('modal-ov').classList.remove('open');editingId=null;}
