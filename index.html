@@ -115,18 +115,28 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .smsg.ok{color:#1a8c42;}.smsg.fail{color:var(--red);}
 
 /* TICKET CARDS */
-.ticket-list{display:grid;gap:8px;}
-.tc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow-sm);}
-.tc.t-urgent{border-left:3px solid var(--red);}
-.tc.t-medium{border-left:3px solid var(--orange);}
-.tc.t-low{border-left:3px solid var(--green);}
-.tc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;}
-.tc-id{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-4);}
-.tc-badges{display:flex;gap:5px;flex-wrap:wrap;}
-.tc-issue{font-size:14px;font-weight:500;color:var(--text);line-height:1.4;margin-bottom:6px;}
-.tc-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.tc-equip{display:inline-flex;align-items:center;background:var(--surface2);border:1px solid var(--border-med);border-radius:5px;padding:2px 7px;font-size:11px;font-weight:500;color:var(--text-3);}
-.tc-note{font-size:12px;color:var(--text-3);}
+.ticket-list{display:grid;gap:10px;}
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow-sm);display:grid;grid-template-columns:76px 1fr;gap:14px;}
+.tc-left{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:3px;}
+.tc-right{}
+.tc-id-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.tc-id{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-4);background:var(--surface2);padding:1px 6px;border-radius:4px;}
+.tc-date{font-size:11px;color:var(--text-4);}
+.tc-issue{font-size:14px;font-weight:500;color:var(--text);line-height:1.4;margin-bottom:3px;}
+.tc-equip{font-size:12px;color:var(--text-3);margin-bottom:8px;}
+.tc-notes-box{background:var(--surface2);border-radius:7px;padding:9px 11px;margin-bottom:7px;}
+.tc-notes-label{font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-4);margin-bottom:3px;}
+.tc-notes-txt{font-size:12px;color:var(--text);line-height:1.6;}
+.tc-assigned{font-size:11px;color:var(--text-4);}
+.tc-waiting{font-size:11px;color:var(--text-4);font-style:italic;}
+.badge-pill{display:inline-flex;align-items:center;border-radius:20px;padding:3px 9px;font-size:11px;font-weight:500;white-space:nowrap;text-align:center;}
+.bp-urg{background:var(--red-light);color:var(--red);}
+.bp-med{background:var(--orange-light);color:var(--orange);}
+.bp-low{background:var(--green-light);color:#1a8c42;}
+.bp-non{background:var(--surface2);color:var(--text-4);}
+.bp-opn{background:var(--red-light);color:var(--red);}
+.bp-inp{background:var(--blue-light);color:var(--blue);}
+.bp-res{background:var(--green-light);color:#1a8c42;}
 .empty-state{text-align:center;padding:48px 24px;color:var(--text-4);}
 .empty-icon{font-size:32px;margin-bottom:10px;opacity:0.4;}
 
@@ -710,17 +720,23 @@ async function fetchStaffTickets(){
     }
     document.getElementById('my-ticket-list').innerHTML=
       `<div class="ticket-list">${mine.map(t=>{
-        const cls={Urgent:'t-urgent',Medium:'t-medium',Low:'t-low'}[t.urgency]||'';
-        return`<div class="tc ${cls}">
-          <div class="tc-top">
-            <div><div class="tc-id">${t.id} · ${t.timestamp||'—'}</div></div>
-            <div class="tc-badges">${uBadge(t.urgency)}${sBadge(t.status)}</div>
+        const ts = t.timestamp ? t.timestamp.replace(/\s*(GMT|SGT|\+\d{4}).*/i,'').trim() : '—';
+        const urgPill = t.urgency ? `<span class="badge-pill ${{Urgent:'bp-urg',Medium:'bp-med',Low:'bp-low'}[t.urgency]||'bp-non'}">${t.urgency}</span>` : `<span class="badge-pill bp-non">Pending</span>`;
+        const staPill = `<span class="badge-pill ${{Open:'bp-opn','In Progress':'bp-inp',Resolved:'bp-res'}[t.status]||'bp-opn'}">${t.status||'Open'}</span>`;
+        return`<div class="tc">
+          <div class="tc-left">
+            ${urgPill}
+            ${staPill}
           </div>
-          <div class="tc-issue">${t.issue}</div>
-          <div class="tc-meta">
-            <span class="tc-equip">${t.equipment}</span>
-            ${t.assigned?`<span class="tc-note">Assigned to ${t.assigned}</span>`:''}
-            ${t.notes?`<span class="tc-note">· ${t.notes}</span>`:''}
+          <div class="tc-right">
+            <div class="tc-id-row">
+              <span class="tc-id">${t.id}</span>
+              <span class="tc-date">${ts}</span>
+            </div>
+            <div class="tc-issue">${t.issue}</div>
+            <div class="tc-equip">${t.equipment}</div>
+            ${t.notes ? `<div class="tc-notes-box"><div class="tc-notes-label">Update from ops</div><div class="tc-notes-txt">${t.notes}</div></div>` : ''}
+            ${t.assigned ? `<div class="tc-assigned">Assigned to ${t.assigned}</div>` : (!t.notes ? `<div class="tc-waiting">Awaiting ops review…</div>` : '')}
           </div>
         </div>`;
       }).join('')}</div>`;
