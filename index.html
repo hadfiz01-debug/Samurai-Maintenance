@@ -260,15 +260,86 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .loading-txt{font-size:13px;color:var(--text-3);}
 
 @media(max-width:768px){
-  .header{padding:0 16px;}
+  /* HEADER */
+  .header{padding:0 14px;height:auto;min-height:52px;flex-wrap:wrap;align-items:center;}
+  .hdr-brand{font-size:14px;}
   .hdr-brand span{display:none;}
-  .dash-wrap{padding:16px;}
-  .stats-row{grid-template-columns:repeat(3,1fr);}
-  .tbl-head,.trow{grid-template-columns:50px 1fr 90px 1fr 90px 90px;}
-  .th:nth-child(7),.th:nth-child(8),.td:nth-child(7),.td:nth-child(8){display:none;}
+  .hdr-right{gap:6px;}
   .last-upd{display:none;}
-  .center-wrap,.tab-wrap,.login-wrap{padding-left:16px;padding-right:16px;}
+  .nav-seg{display:none !important;}
+
+  /* MOBILE TAB BAR — appears below header */
+  .mobile-tabs{display:flex !important;}
+
+  /* ADMIN STATS — 2x2 grid */
+  .stats-row{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .stat-card{padding:14px 16px;}
+  .stat-val{font-size:26px;}
+
+  /* ADMIN TABLE — hide, show mobile cards instead */
+  .tbl-wrap{display:none;}
+  .mobile-ticket-list{display:grid !important;}
+
+  /* OUTLET CHIPS — smaller */
+  .outlet-chip{font-size:12px;padding:5px 10px;}
+
+  /* TOOLBAR */
+  .toolbar{gap:6px;}
+  .seg-filter button{padding:5px 10px;font-size:12px;}
+  .srch{width:100%;}
+  .t-spc{display:none;}
+
+  /* DASH WRAP */
+  .dash-wrap{padding:14px 16px;}
+
+  /* STAFF PAGES */
+  .center-wrap{padding:28px 16px;}
+  .tab-wrap{padding:16px 16px 60px;}
+  .login-wrap{padding:40px 16px;}
+
+  /* TC card left column narrower on small screens */
+  .tc{grid-template-columns:68px 1fr;gap:10px;}
+  .badge-pill{font-size:10px;padding:2px 7px;}
 }
+
+/* MOBILE TAB BAR — hidden by default, shown on mobile */
+.mobile-tabs{
+  display:none;
+  background:rgba(255,255,255,0.92);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:6px 14px;
+  gap:4px;
+  position:sticky;top:52px;z-index:99;
+}
+.mobile-tab{
+  flex:1;text-align:center;padding:6px 4px;border-radius:7px;border:none;
+  background:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  color:var(--text-3);cursor:pointer;transition:all 0.15s;
+}
+.mobile-tab.active{background:var(--accent);color:white;}
+
+/* MOBILE ADMIN TICKET CARDS — hidden on desktop */
+.mobile-ticket-list{
+  display:none;
+  grid-template-columns:1fr;
+  gap:8px;
+  margin-bottom:16px;
+}
+.mtc{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:13px 14px;
+  box-shadow:var(--shadow-sm);cursor:pointer;transition:background 0.1s;
+}
+.mtc:active{background:var(--surface2);}
+.mtc.mu-row{border-left:3px solid var(--red);padding-left:11px;}
+.mtc.mn-row{border-left:3px solid var(--border-med);padding-left:11px;}
+.mtc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;}
+.mtc-issue{font-size:13px;font-weight:500;color:var(--text);line-height:1.4;flex:1;}
+.mtc-meta{font-size:11px;color:var(--text-4);margin-bottom:6px;}
+.mtc-bottom{display:flex;align-items:center;justify-content:space-between;}
+.mtc-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-4);}
 </style>
 </head>
 <body>
@@ -290,6 +361,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   </div>
 </div>
 <div class="prog-bar"><div class="prog-fill" id="cd-fill" style="width:0%"></div></div>
+
+<!-- MOBILE TAB BAR (shown on mobile only, populated by JS) -->
+<div class="mobile-tabs" id="mobile-tabs"></div>
 
 <!-- ── SCREEN: BRANCH SELECT ──────────────────────────────────────────── -->
 <div class="screen show" id="scr-branch">
@@ -523,6 +597,7 @@ function changeBranch(){
   document.getElementById('mode-badge').style.display='none';
   document.getElementById('last-upd').textContent='';
   document.getElementById('footer').classList.remove('show');
+  document.getElementById('mobile-tabs').innerHTML='';
   renderBranchGrid();
   showScreen('branch');
 }
@@ -562,6 +637,7 @@ function enterAdmin(){
     <button id="tab-submit-admin" onclick="switchAdminTab('submit')">+ Report Issue</button>
     <button onclick="logoutAdmin()" style="color:var(--text-4)">Sign out</button>`;
   showScreen('admin');
+  renderMobileTabs('admin');
   fetchAdmin();
 }
 
@@ -626,6 +702,7 @@ function enterStaff(){
     <button onclick="changeBranch()" style="color:var(--text-4)">Change outlet</button>`;
   document.getElementById('staff-branch-name').textContent=selectedBranch;
   showScreen('staff');
+  renderMobileTabs('staff');
   switchStaffTab('report');
 }
 
@@ -804,7 +881,7 @@ function renderPhotoPreview(){
 }
 
 // ── ADMIN RENDER ──────────────────────────────────────────────────────────
-function render(){renderStats();renderOutlets();renderTable();}
+function render(){renderStats();renderOutlets();renderTable();renderMobileTickets();}
 
 function renderStats(){
   const open=TICKETS.filter(t=>t.status!=='Resolved');
@@ -981,6 +1058,55 @@ function fc(h,...names){for(const n of names){const i=h.findIndex(x=>x.toLowerCa
 function g(row,idx){return idx>=0&&idx<row.length?(row[idx]||'').trim():'';}
 function normU(v){if(!v)return'';const l=v.toLowerCase();if(l.includes('urgent')||l.includes('high'))return'Urgent';if(l.includes('medium')||l.includes('med'))return'Medium';if(l.includes('low'))return'Low';return v;}
 function normS(v){if(!v)return'Open';const l=v.toLowerCase();if(l.includes('resolv')||l.includes('done'))return'Resolved';if(l.includes('progress')||l.includes('wip'))return'In Progress';return'Open';}
+
+// ── MOBILE TABS ───────────────────────────────────────────────────────────
+function renderMobileTabs(m) {
+  const bar = document.getElementById('mobile-tabs');
+  if(!bar) return;
+  if(m === 'admin') {
+    bar.innerHTML = `
+      <button class="mobile-tab active" id="mtab-dash" onclick="switchAdminTab('dashboard');setMobileTab('mtab-dash')">Dashboard</button>
+      <button class="mobile-tab" id="mtab-report" onclick="switchAdminTab('submit');setMobileTab('mtab-report')">+ Report</button>
+      <button class="mobile-tab" onclick="logoutAdmin()" style="color:var(--text-4)">Sign out</button>`;
+  } else if(m === 'staff') {
+    bar.innerHTML = `
+      <button class="mobile-tab active" id="mtab-sreport" onclick="switchStaffTab('report');setMobileTab('mtab-sreport')">Report Issue</button>
+      <button class="mobile-tab" id="mtab-stickets" onclick="switchStaffTab('tickets');setMobileTab('mtab-stickets')">My Tickets</button>
+      <button class="mobile-tab" onclick="changeBranch()" style="color:var(--text-4)">Change</button>`;
+  } else {
+    bar.innerHTML = '';
+  }
+}
+
+function setMobileTab(activeId) {
+  document.querySelectorAll('.mobile-tab').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById(activeId);
+  if(el) el.classList.add('active');
+}
+
+// ── MOBILE ADMIN TICKET CARDS ─────────────────────────────────────────────
+function renderMobileTickets() {
+  const wrap = document.getElementById('mobile-ticket-list');
+  if(!wrap) return;
+  const data = getFiltered();
+  if(!data.length) { wrap.innerHTML = '<div class="no-res">No tickets match current filters.</div>'; return; }
+  wrap.innerHTML = data.map(t => {
+    const sh = t.branch.replace(/^Samurai Yakiniku\s*/i,'SY ').replace(/^Hattori\s*/i,'H. ').replace(/^Konoha\s*/i,'K. ');
+    const cls = [t.urgency==='Urgent'&&t.status!=='Resolved'?'mu-row':'', !t.urgency&&t.status!=='Resolved'?'mn-row':''].filter(Boolean).join(' ');
+    return `<div class="mtc ${cls}" onclick="openMod('${t.id}')">
+      <div class="mtc-top">
+        <div class="mtc-issue">${t.issue.length>60?t.issue.slice(0,60)+'…':t.issue}</div>
+        ${uBadge(t.urgency)}
+      </div>
+      <div class="mtc-meta">${sh} · ${t.equipment}</div>
+      <div class="mtc-bottom">
+        ${sBadge(t.status)}
+        <span class="mtc-id">${t.id}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 </script>
 </body>
 </html>
