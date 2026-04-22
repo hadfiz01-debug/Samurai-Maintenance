@@ -137,6 +137,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .bp-opn{background:var(--red-light);color:var(--red);}
 .bp-inp{background:var(--blue-light);color:var(--blue);}
 .bp-res{background:var(--green-light);color:#1a8c42;}
+.bp-rej{background:#f0f0f2;color:#6e6e73;}
 .empty-state{text-align:center;padding:48px 24px;color:var(--text-4);}
 .empty-icon{font-size:32px;margin-bottom:10px;opacity:0.4;}
 
@@ -202,6 +203,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .b-opn{background:var(--red-light);color:var(--red);}
 .b-inp{background:var(--blue-light);color:var(--blue);}
 .b-res{background:var(--green-light);color:#1a8c42;}
+.b-rej{background:#f5f5f7;color:#6e6e73;border:1px solid rgba(0,0,0,0.1);}
 
 /* MODAL */
 .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:20px;}
@@ -492,6 +494,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
         <button onclick="setSF('Open',this)">Open</button>
         <button onclick="setSF('In Progress',this)">In Progress</button>
         <button onclick="setSF('Resolved',this)">Resolved</button>
+        <button onclick="setSF('Rejected',this)">Rejected</button>
       </div>
       <div class="t-spc"></div>
       <div class="srch-wrap">
@@ -801,7 +804,7 @@ async function fetchStaffTickets(){
       `<div class="ticket-list">${mine.map(t=>{
         const ts = t.timestamp ? t.timestamp.replace(/\s*(GMT|SGT|\+\d{4}).*/i,'').trim() : '—';
         const urgPill = t.urgency ? `<span class="badge-pill ${{Urgent:'bp-urg',Medium:'bp-med',Low:'bp-low'}[t.urgency]||'bp-non'}">${t.urgency}</span>` : `<span class="badge-pill bp-non">Pending</span>`;
-        const staPill = `<span class="badge-pill ${{Open:'bp-opn','In Progress':'bp-inp',Resolved:'bp-res'}[t.status]||'bp-opn'}">${t.status||'Open'}</span>`;
+        const staPill = `<span class="badge-pill ${{Open:'bp-opn','In Progress':'bp-inp',Resolved:'bp-res',Rejected:'bp-rej'}[t.status]||'bp-opn'}">${t.status||'Open'}</span>`;
         return`<div class="tc">
           <div class="tc-left">
             ${urgPill}
@@ -886,12 +889,16 @@ function renderPhotoPreview(){
 function render(){renderStats();renderOutlets();renderTable();renderMobileTickets();}
 
 function renderStats(){
-  const open=TICKETS.filter(t=>t.status!=='Resolved');
+  const open=TICKETS.filter(t=>t.status!=='Resolved'&&t.status!=='Rejected');
   document.getElementById('cnt-all').textContent=open.length;
   document.getElementById('cnt-urgent').textContent=open.filter(t=>t.urgency==='Urgent').length;
   document.getElementById('cnt-medium').textContent=open.filter(t=>t.urgency==='Medium').length;
   document.getElementById('cnt-low').textContent=open.filter(t=>t.urgency==='Low').length;
-  document.getElementById('cnt-resolved').textContent=TICKETS.filter(t=>t.status==='Resolved').length;
+  const resolvedCount = TICKETS.filter(t=>t.status==='Resolved').length;
+  const rejectedCount = TICKETS.filter(t=>t.status==='Rejected').length;
+  document.getElementById('cnt-resolved').textContent = resolvedCount;
+  const resolvedSub = document.querySelector('#card-resolved .stat-sub');
+  if(resolvedSub) resolvedSub.textContent = rejectedCount > 0 ? `closed · ${rejectedCount} rejected` : 'closed';
   const noU=open.filter(t=>!t.urgency).length;
   const wb=document.getElementById('warn-bar');
   if(noU>0){wb.className='warn-bar show';wb.textContent=`${noU} ticket${noU>1?'s have':' has'} no urgency assigned — click a row to set it.`;}
@@ -978,6 +985,7 @@ function openMod(id){
           <option value="Open" ${t.status==='Open'?'selected':''}>Open</option>
           <option value="In Progress" ${t.status==='In Progress'?'selected':''}>In Progress</option>
           <option value="Resolved" ${t.status==='Resolved'?'selected':''}>Resolved</option>
+          <option value="Rejected" ${t.status==='Rejected'?'selected':''}>Rejected</option>
         </select>
       </div>
       <div class="mf" style="margin-bottom:8px"><div class="mf-lbl" style="margin-bottom:5px">Assigned To</div>
@@ -1053,13 +1061,13 @@ function setLive(s){
 
 // ── CSV UTILS ─────────────────────────────────────────────────────────────
 function uBadge(u){if(!u)return'';const m={Urgent:'b-urg',Medium:'b-med',Low:'b-low'};return`<span class="badge ${m[u]||'b-non'}">${u}</span>`;}
-function sBadge(s){const m={Open:'b-opn','In Progress':'b-inp',Resolved:'b-res'};return`<span class="badge ${m[s]||'b-opn'}">${s||'Open'}</span>`;}
+function sBadge(s){const m={Open:'b-opn','In Progress':'b-inp',Resolved:'b-res',Rejected:'b-rej'};return`<span class="badge ${m[s]||'b-opn'}">${s||'Open'}</span>`;}
 function parseCSV(t){const l=t.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim().split('\n');return{headers:sr(l[0]),rows:l.slice(1).map(sr).filter(r=>r.some(c=>c.trim()))};}
 function sr(line){const r=[];let c='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){q=!q;continue;}if(ch===','&&!q){r.push(c.trim());c='';continue;}c+=ch;}r.push(c.trim());return r;}
 function fc(h,...names){for(const n of names){const i=h.findIndex(x=>x.toLowerCase().trim()===n.toLowerCase());if(i>=0)return i;}for(const n of names){const i=h.findIndex(x=>x.toLowerCase().includes(n.toLowerCase()));if(i>=0)return i;}return -1;}
 function g(row,idx){return idx>=0&&idx<row.length?(row[idx]||'').trim():'';}
 function normU(v){if(!v)return'';const l=v.toLowerCase();if(l.includes('urgent')||l.includes('high'))return'Urgent';if(l.includes('medium')||l.includes('med'))return'Medium';if(l.includes('low'))return'Low';return v;}
-function normS(v){if(!v)return'Open';const l=v.toLowerCase();if(l.includes('resolv')||l.includes('done'))return'Resolved';if(l.includes('progress')||l.includes('wip'))return'In Progress';return'Open';}
+function normS(v){if(!v)return'Open';const l=v.toLowerCase();if(l.includes('resolv')||l.includes('done'))return'Resolved';if(l.includes('progress')||l.includes('wip'))return'In Progress';if(l.includes('reject'))return'Rejected';return'Open';}
 
 // ── MOBILE TABS ───────────────────────────────────────────────────────────
 function renderMobileTabs(m) {
